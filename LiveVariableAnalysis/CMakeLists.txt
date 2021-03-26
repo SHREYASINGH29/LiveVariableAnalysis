@@ -9,7 +9,7 @@ add_library(LVAPass MODULE
 # LLVM is (typically) built with no C++ RTTI. We need to match that;
 # otherwise, we'll get linker errors about missing RTTI data.
 set_target_properties(LVAPass PROPERTIES
-    COMPILE_FLAGS "-fno-rtti -std=c++14"
+    COMPILE_FLAGS "-fno-rtti -std=c++14 -g"
 )
 
 # Get proper shared-library behavior (where symbols are not necessarily
