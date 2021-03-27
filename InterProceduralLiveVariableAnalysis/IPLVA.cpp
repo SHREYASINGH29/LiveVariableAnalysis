@@ -23,6 +23,18 @@ class IPLVAPass : public ModulePass {
 	static char ID;
 	IPLVAPass() : ModulePass(ID) {}
 	std::map<Instruction*, std::set<Value*>> In, Out;
+	void goToFunction(Function &F){
+		auto end = inst_end(F);
+		do{
+			end--;
+			Out[&*end] = getOut(&*end);
+			In[&*end] = getIn(&*end);
+			std::cout << "Out: "; printSet(Out[&*end]);
+			errs()<< "Instruction: "<< *end<<"\n";
+			std::cout << "In: "; printSet(In[&*end]);
+			std::cout << "--------------\n";
+		}while(end != inst_begin(F));
+	}
 	std::set<Value*> gen(Instruction *I){
 		std::set<Value*> var;
 		if(AllocaInst *AI = dyn_cast<AllocaInst>(I)){
@@ -69,7 +81,8 @@ class IPLVAPass : public ModulePass {
 	void handleCall(CallInst *CI){
 		auto *Function_called = CI->getCalledFunction();
 		Instruction *CF = &(Function_called->back().back());
-		Out[CF] = setUnion(Out[CF], Out[CI]);	
+		Out[CF] = setUnion(Out[CF], Out[CI]);
+		goToFunction(*Function_called);	
 	}
 	std::set<Value*> kill(Instruction *I){
 		std::set<Value*> var;
@@ -138,16 +151,7 @@ class IPLVAPass : public ModulePass {
 	
 	bool runOnModule(Module &M) override {
 		for(Function &F : M.functions()){
-		auto end = inst_end(F);
-		do{
-			end--;
-			Out[&*end] = getOut(&*end);
-			In[&*end] = getIn(&*end);
-			std::cout << "Out: "; printSet(Out[&*end]);
-			errs()<< "Instruction: "<< *end<<"\n";
-			std::cout << "In: "; printSet(In[&*end]);
-			std::cout << "--------------\n";
-		}while(end != inst_begin(F));
+			goToFunction(F);	
 		}
 		return false;
 	}
