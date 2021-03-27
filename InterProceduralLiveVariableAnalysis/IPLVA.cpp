@@ -10,6 +10,7 @@
 #include "map"
 #include "set"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 
@@ -17,10 +18,10 @@ namespace {
 
 #define DEBUG_TYPE "iplva"                                                   
 
-class IPLVAPass : public FunctionPass {
+class IPLVAPass : public ModulePass {
        public:
 	static char ID;
-	IPLVAPass() : FunctionPass(ID) {}
+	IPLVAPass() : ModulePass(ID) {}
 	std::map<Instruction*, std::set<Value*>> In, Out;
 	std::set<Value*> gen(Instruction *I){
 		std::set<Value*> var;
@@ -59,6 +60,17 @@ class IPLVAPass : public FunctionPass {
 		}
 		return var;
 	}
+	void printSet(std::set<Value*> Val){
+		for(auto temp : Val){
+			std::cout<<temp->getName().str()<<" ";
+		}
+		std::cout<<"\n";	
+	}
+	void handleCall(CallInst *CI){
+		auto *Function_called = CI->getCalledFunction();
+		Instruction *CF = &(Function_called->back().back());
+		Out[CF] = setUnion(Out[CF], Out[CI]);	
+	}
 	std::set<Value*> kill(Instruction *I){
 		std::set<Value*> var;
 		if(AllocaInst *AI = dyn_cast<AllocaInst>(I)){
@@ -75,6 +87,7 @@ class IPLVAPass : public FunctionPass {
 			if(Value* V = dyn_cast<Value>(I)){
 				var.insert(V);
 			}
+			handleCall(CI);
 		}
 		return var;
 	}
@@ -115,30 +128,27 @@ class IPLVAPass : public FunctionPass {
 	}
 
 	std::set<Value*> getOut(Instruction *I){
-		std::set<Value*> OutVal;
+		std::set<Value*> OutVal = Out[I];
 		for(Instruction *Succ:getSucc(I)){
 			OutVal = setUnion(OutVal, In[Succ]);	
 		}
 		return OutVal;
 	}
-	void printSet(std::set<Value*> Val){
-		for(auto temp : Val){
-			std::cout<<temp->getName().str()<<" ";
-		}
-		std::cout<<"\n";	
-	}
-	bool runOnFunction(Function &F) override {
+	
+	
+	bool runOnModule(Module &M) override {
+		for(Function &F : M.functions()){
 		auto end = inst_end(F);
 		do{
 			end--;
 			Out[&*end] = getOut(&*end);
 			In[&*end] = getIn(&*end);
 			std::cout << "Out: "; printSet(Out[&*end]);
-			errs()<< "Instruction: " << *end<<"\n";
+			errs()<< "Instruction: "<< *end<<"\n";
 			std::cout << "In: "; printSet(In[&*end]);
 			std::cout << "--------------\n";
 		}while(end != inst_begin(F));
-		
+		}
 		return false;
 	}
 };
