@@ -74,6 +74,12 @@ class IPLVAPass : public ModulePass {
 	}
 	void printSet(std::set<Value*> Val){
 		for(auto temp : Val){
+			if(Instruction* I = dyn_cast<Instruction>(temp)){
+				Function* F = I->getFunction();
+				if(F){
+					std::cout<<"["<<F->getName().str()<<"]";
+				} 
+			}
 			std::cout<<temp->getName().str()<<" ";
 		}
 		std::cout<<"\n";	
