@@ -10,6 +10,10 @@ pushd _build
 cmake ..
 make
 popd
-$CC -S -emit-llvm -o test.ll test.c
-$OPT -instnamer  -load _build/*/*LVA* -lva test.ll
+$CC -S -emit-llvm -o test.ll inter.c
+if [ "$1" != "-i" ]; then
+$OPT -instnamer  -load _build/*/*libLVA* -lva test.ll
+else 
+$OPT -instnamer -load _build/*/*IPLVA* -iplva test.ll
+fi
 #rm -rf _build test.bc
